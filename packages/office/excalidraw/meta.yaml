@@ -12,7 +12,7 @@ tags:
 source:
   type: github_release
   repo: "excalidraw/excalidraw"
-  asset: "api\\.github\\.com/repos/excalidraw/excalidraw/tarball/"
+  asset: 'api\.github\.com/repos/excalidraw/excalidraw/tarball/'
   strip: 1
 
 dependencies:

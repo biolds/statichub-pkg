@@ -145,7 +145,7 @@ Update detection: `HEAD` request → read `ETag`, `Last-Modified`, or `Content-L
 source:
   type: github_release
   repo: "gchq/CyberChef"
-  asset: "CyberChef_v.*\\.zip"  # regexp matched against asset URLs (see WARNING below)
+  asset: 'CyberChef_v.*\.zip'  # regexp matched against asset URLs (see WARNING below)
   format: zip                    # optional, auto-detected
   strip: 0
 ```
