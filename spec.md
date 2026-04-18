@@ -6,7 +6,7 @@
 
 - Package definitions (`meta.yaml`, optional `build.sh`) organized in a directory hierarchy.
 - The local launcher homepage (`index.html`).
-- An API version file (`api_version`).
+- A repository manifest file (`manifest.json`).
 
 It is cloned locally by the `statichub-cli` and kept up to date via `statichub update` (git pull).
 
@@ -220,9 +220,77 @@ It reads `./catalog.json` at load time (client-side JavaScript) with no external
 
 ---
 
-## GitHub Action — `staticweb.json`
+## GitHub Actions
 
-A GitHub Action triggered on each push to the main branch generates `staticweb.json` aggregating all package metadata from `meta.yaml` files. This file is pushed to the `statichub-web` repository and serves as the data contract for the public catalog website.
+### `validate.yml` — triggered on `push` and `pull_request`
+
+Validates any package added or modified in the PR/push.
+
+**Steps:**
+
+1. Detect modified packages: `git diff --name-only origin/main...HEAD` filtered on `packages/` → extract unique package paths.
+2. Validate `manifest.json`: assert `api_version` is present and is an integer (`yq e '.api_version | tag == "!!int"' manifest.json`).
+3. For each modified package:
+   - Validate `meta.yaml` with `yq`:
+     - Required fields present: `title`, `description`, `license`, `source.type`.
+     - Type-specific rules:
+       - `source.type: custom` → `build.sh` must be present.
+       - `source.type: archive` with no `upstream_version` → `source.url` must be present.
+       - `source.type: github_release` → `source.repo` must be present.
+       - `source.type: git` → `source.url` and `source.ref` must be present.
+   - If `build.sh` is present: assert it is executable (`test -x build.sh`).
+   - Install the CLI from the latest GitHub release of `statichub-cli` (download pre-compiled asset for the runner OS/arch).
+   - Run `statichub install {path} --dest /tmp/test`.
+   - Assert `/tmp/test/{path}/` exists and is non-empty.
+
+---
+
+### `staticweb.yml` — scheduled daily (`0 3 * * *`)
+
+Generates `staticweb.json` from all package metadata and publishes it to the `statichub-web` Netlify site.
+
+**Steps:**
+
+1. Walk all `packages/**/meta.yaml` files, sorted alphabetically by path.
+2. For each package, extract: `path`, `title`, `description`, `homepage`, `live_url`, `license`, `tags`, `source.type`, and `source.repo` / `source.url` where applicable.
+3. For packages with `source.type: github_release` or `source.type: git` with a `github.com` URL: call `GET /repos/{owner}/{repo}` (authenticated via `GITHUB_TOKEN` secret) → read `stargazers_count`.
+4. Write `staticweb.json` (see format below).
+5. Publish to Netlify: `netlify deploy --prod --dir=. --message="staticweb daily update"` using secrets `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID`.
+
+**`staticweb.json` format:**
+
+```json
+{
+  "generated_at": "2026-04-18T03:00:00Z",
+  "packages": [
+    {
+      "path": "security/cyberchef",
+      "title": "CyberChef",
+      "description": "Swiss army knife for data operations",
+      "homepage": "https://gchq.github.io/CyberChef/",
+      "live_url": "https://cyberchef.org/",
+      "license": "Apache-2.0",
+      "tags": ["security", "encoding"],
+      "source_type": "github_release",
+      "source_repo": "gchq/CyberChef",
+      "github_stars": 42000
+    }
+  ]
+}
+```
+
+| Field          | Always present | Description                                                                 |
+| -------------- | -------------- | --------------------------------------------------------------------------- |
+| `path`         | yes            | Relative path under `packages/`                                             |
+| `title`        | yes            |                                                                             |
+| `description`  | yes            |                                                                             |
+| `license`      | yes            |                                                                             |
+| `tags`         | yes            | Empty array if not set                                                      |
+| `source_type`  | yes            | Value of `source.type`                                                      |
+| `homepage`     | no             | Omitted if not set in `meta.yaml`                                           |
+| `live_url`     | no             | Omitted if not set in `meta.yaml`                                           |
+| `source_repo`  | no             | `source.repo` for `github_release`/`gitlab_release`, owner/repo from `source.url` for `git` |
+| `github_stars` | no             | Only for `github_release` and `git` hosted on `github.com`                  |
 
 ---
 
