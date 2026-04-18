@@ -145,10 +145,32 @@ Update detection: `HEAD` request → read `ETag`, `Last-Modified`, or `Content-L
 source:
   type: github_release
   repo: "gchq/CyberChef"
-  asset: "CyberChef_v*.zip"  # glob pattern on asset name (first asset if omitted)
-  format: zip                 # optional, auto-detected
+  asset: "CyberChef_v.*\\.zip"  # regexp matched against asset URLs (see WARNING below)
+  format: zip                    # optional, auto-detected
   strip: 0
 ```
+
+The `asset` field is a **regular expression** matched against the following fields returned by `GET /repos/{owner}/{repo}/releases/latest`:
+
+- `assets[].browser_download_url` — uploaded release assets
+- `tarball_url` — source tarball (API URL, not the web UI URL)
+- `zipball_url` — source zipball (API URL, not the web UI URL)
+
+If `asset` is omitted: the single entry in `assets[]` is used automatically; if there are zero or more than one, the install fails with an explicit error.
+
+> **WARNING — API URLs differ from the GitHub web UI**
+>
+> The values matched by `asset` come directly from the GitHub API response, not from what is displayed in the GitHub web UI. Always use `curl` or similar to inspect the real values before writing your regexp.
+>
+> Example for `excalidraw/excalidraw` at `v0.18.0`:
+>
+> | Field | Value |
+> |-------|-------|
+> | `assets[0].browser_download_url` | `https://github.com/excalidraw/excalidraw/releases/download/v0.18.0/excalidraw-0.18.0.tgz` |
+> | `tarball_url` | `https://api.github.com/repos/excalidraw/excalidraw/tarball/v0.18.0` |
+> | `zipball_url` | `https://api.github.com/repos/excalidraw/excalidraw/zipball/v0.18.0` |
+>
+> Note that `tarball_url` points to `api.github.com`, **not** to the `github.com/…/archive/…` URL shown in the web UI download section.
 
 Update detection: `GET /repos/{owner}/{repo}/releases/latest` → `tag_name` compared to `catalog.json`.
 

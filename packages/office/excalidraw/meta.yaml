@@ -1,0 +1,20 @@
+title: "Excalidraw"
+description: "Virtual whiteboard for sketching hand-drawn like diagrams"
+homepage: "https://excalidraw.com/"
+live_url: "https://excalidraw.com/"
+license: MIT
+tags:
+  - office
+  - drawing
+  - whiteboard
+  - diagram
+
+source:
+  type: github_release
+  repo: "excalidraw/excalidraw"
+  asset: "api\\.github\\.com/repos/excalidraw/excalidraw/tarball/"
+  strip: 1
+
+dependencies:
+  - node
+  - npm
