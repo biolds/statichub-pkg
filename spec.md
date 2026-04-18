@@ -10,6 +10,8 @@
 
 It is cloned locally by the `statichub-cli` and kept up to date via `statichub update` (git pull).
 
+**Fundamental constraint:** every installed package must be **self-contained** — once installed in `<dest>/{path}/`, it must work fully without any Internet connection. No CDN, no external API calls, no remotely loaded resources (fonts, scripts, stylesheets, images). All dependencies must be bundled inside `dist/`.
+
 **Default local clone paths:**
 
 | OS      | Path                                            |
@@ -315,3 +317,4 @@ Generates `staticweb.json` from all package metadata and publishes it to the `st
 | No Windows support   | `build.sh` requires bash; Windows out of scope                                        |
 | Rollback on failure  | CLI never modifies `<dest>/{path}/` or `catalog.json` if build fails                  |
 | Homepage versioned   | `index.html` is part of this repo and updated in `<dest>/` after `statichub update`   |
+| **Self-contained**   | Every installed package must work without Internet access; no CDN, no remote resources, no external API calls at runtime — all assets must be bundled in `dist/` |
