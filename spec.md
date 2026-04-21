@@ -94,13 +94,14 @@ source:
   type: github_release  # archive | github_release | gitlab_release | git | custom
   # ... type-specific fields (see below)
 
-dependencies:           # optional — system binaries required by build.sh
-  - npm
+docker_image: "node:22-alpine"  # required when build.sh is present — Docker image used to run the build
 ```
 
 **Required fields:** `title`, `description`, `license`, `source.type`.
 
-**Optional fields:** `live_url`, `dependencies`.
+**Required when `build.sh` is present:** `docker_image` — Docker image used to run `build.sh` inside an ephemeral container.
+
+**Optional fields:** `live_url`.
 
 ---
 
@@ -221,6 +222,8 @@ Update detection: compare `upstream_version` in `meta.yaml` against `catalog.jso
 
 When present, `build.sh` is executed by the CLI in a temporary working directory with the source already present (extracted archive, cloned repo, or empty dir for `custom`). It **must produce `./dist/`** containing the final static files to deploy.
 
+By default, `build.sh` runs inside an ephemeral Docker container (`docker run --rm`) using the image declared in `docker_image`, with the temp dir mounted as the working directory. The `--no-docker` flag on `install`/`upgrade` bypasses Docker and runs `build.sh` directly on the host.
+
 | Source type      | Without `build.sh`                      | With `build.sh`                                |
 | ---------------- | --------------------------------------- | ---------------------------------------------- |
 | `archive`        | Extract → copy `dist/` to dest          | Extract to temp dir → `build.sh` → `dist/`     |
@@ -262,6 +265,7 @@ Validates any package added or modified in the PR/push.
        - `source.type: archive` with no `upstream_version` → `source.url` must be present.
        - `source.type: github_release` → `source.repo` must be present.
        - `source.type: git` → `source.url` and `source.ref` must be present.
+     - If `build.sh` is present → `docker_image` must be declared.
    - If `build.sh` is present: assert it is executable (`test -x build.sh`).
    - Install the CLI from the latest GitHub release of `statichub-cli` (download pre-compiled asset for the runner OS/arch).
    - Run `statichub install {path} --dest /tmp/test`.
@@ -336,6 +340,7 @@ Generates `staticweb.json` from all package metadata and publishes it to the `st
 | -------------------- | ------------------------------------------------------------------------------------- |
 | `api_version`        | Explicit contract in `manifest.json`; blocking error if CLI is too old                                   |
 | `build.sh` optional  | Required only for `git` (with build step) and `custom`                                |
+| `docker_image` required | Required in `meta.yaml` whenever `build.sh` is present; validated by CI             |
 | No Windows support   | `build.sh` requires bash; Windows out of scope                                        |
 | Rollback on failure  | CLI never modifies `<dest>/{path}/` or `catalog.json` if build fails                  |
 | Homepage versioned   | `index.html` is part of this repo and updated in `<dest>/` after `statichub update`   |
