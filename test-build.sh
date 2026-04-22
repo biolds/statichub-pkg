@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# test-build.sh - Manually verify a package build
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <package-path>"
+    echo "Example: $0 office/excalidraw"
+    exit 1
+fi
+
+PKG_PATH="$1"
+PKG_DIR="packages/$PKG_PATH"
+META_FILE="$PKG_DIR/meta.yaml"
+BUILD_SH="$PKG_DIR/build.sh"
+SRC_DIR="$PKG_DIR/src"
+BUILD_DIR="$PKG_DIR/build"
+
+if [ ! -d "$PKG_DIR" ]; then
+    echo "Error: Package directory '$PKG_DIR' not found."
+    exit 1
+fi
+
+if [ ! -f "$META_FILE" ]; then
+    echo "Error: '$META_FILE' not found."
+    exit 1
+fi
+
+if [ ! -f "$BUILD_SH" ]; then
+    echo "Error: '$BUILD_SH' not found."
+    exit 1
+fi
+
+# 1. Extract metadata
+echo "--- Extracting metadata ---"
+DOCKER_IMAGE=$(yq -r '.docker_image' "$META_FILE")
+SOURCE_TYPE=$(yq -r '.source.type' "$META_FILE")
+
+if [ "$DOCKER_IMAGE" == "null" ]; then
+    echo "Error: 'docker_image' not specified in meta.yaml"
+    exit 1
+fi
+
+echo "Package: $PKG_PATH"
+echo "Image:   $DOCKER_IMAGE"
+echo "Source:  $SOURCE_TYPE"
+
+# 2. Handle Source Download
+if [ ! -d "$SRC_DIR" ]; then
+    echo "--- Downloading sources into src/ ---"
+    mkdir -p "$SRC_DIR"
+    
+    STRIP=$(yq -r '.source.strip // 0' "$META_FILE")
+    
+    case "$SOURCE_TYPE" in
+        git)
+            URL=$(yq -r '.source.url' "$META_FILE")
+            REF=$(yq -r '.source.ref' "$META_FILE")
+            echo "Cloning $URL ($REF)..."
+            git clone --depth 1 --branch "$REF" "$URL" "$SRC_DIR"
+            ;;
+            
+        github_release)
+            REPO=$(yq -r '.source.repo' "$META_FILE")
+            ASSET_PATTERN=$(yq -r '.source.asset' "$META_FILE")
+            echo "Fetching latest release for $REPO..."
+            
+            RELEASE_JSON=$(curl -s "https://api.github.com/repos/$REPO/releases/latest")
+            
+            if [ "$ASSET_PATTERN" == "null" ] || [[ "$ASSET_PATTERN" == *"tarball"* ]]; then
+                DOWNLOAD_URL=$(echo "$RELEASE_JSON" | jq -r '.tarball_url')
+                FORMAT="tar.gz"
+            else
+                # Filter assets by regex
+                DOWNLOAD_URL=$(echo "$RELEASE_JSON" | jq -r --arg pat "$ASSET_PATTERN" '.assets[] | select(.browser_download_url | test($pat)) | .browser_download_url' | head -n 1)
+                # Detect format from URL
+                if [[ "$DOWNLOAD_URL" == *.zip ]]; then FORMAT="zip"; else FORMAT="tar.gz"; fi
+            fi
+            
+            if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" == "null" ]; then
+                echo "Error: Could not find download URL for $REPO"
+                exit 1
+            fi
+            
+            echo "Downloading $DOWNLOAD_URL..."
+            TEMP_ARCHIVE=$(mktemp)
+            curl -L -o "$TEMP_ARCHIVE" "$DOWNLOAD_URL"
+            
+            if [ "$FORMAT" == "zip" ]; then
+                unzip -q "$TEMP_ARCHIVE" -d "$SRC_DIR"
+                # Handle strip manually for zip if needed (unzip doesn't have --strip-components)
+                if [ "$STRIP" -gt 0 ]; then
+                    # This is a simplified strip for 1 level
+                    TOP_DIR=$(ls -1 "$SRC_DIR" | head -n 1)
+                    mv "$SRC_DIR/$TOP_DIR"/* "$SRC_DIR/"
+                    rmdir "$SRC_DIR/$TOP_DIR"
+                fi
+            else
+                tar -xzf "$TEMP_ARCHIVE" -C "$SRC_DIR" --strip-components="$STRIP"
+            fi
+            rm "$TEMP_ARCHIVE"
+            ;;
+            
+        archive)
+            URL=$(yq -r '.source.url' "$META_FILE")
+            echo "Downloading $URL..."
+            TEMP_ARCHIVE=$(mktemp)
+            curl -L -o "$TEMP_ARCHIVE" "$URL"
+            # Detect format (simplified)
+            if [[ "$URL" == *.zip ]]; then
+                unzip -q "$TEMP_ARCHIVE" -d "$SRC_DIR"
+                if [ "$STRIP" -gt 0 ]; then
+                    TOP_DIR=$(ls -1 "$SRC_DIR" | head -n 1)
+                    mv "$SRC_DIR/$TOP_DIR"/* "$SRC_DIR/"
+                    rmdir "$SRC_DIR/$TOP_DIR"
+                fi
+            else
+                tar -xzf "$TEMP_ARCHIVE" -C "$SRC_DIR" --strip-components="$STRIP"
+            fi
+            rm "$TEMP_ARCHIVE"
+            ;;
+            
+        custom)
+            echo "Custom source: nothing to download."
+            ;;
+            
+        *)
+            echo "Error: Unsupported source type '$SOURCE_TYPE'"
+            exit 1
+            ;;
+    esac
+else
+    echo "--- Reusing existing src/ directory ---"
+fi
+
+# 3. Prepare Build
+echo "--- Preparing build ---"
+# Copy build.sh and other package files to src/
+# Exclude meta.yaml, src/, build/
+find "$PKG_DIR" -maxdepth 1 -not -path "$PKG_DIR" -not -name "meta.yaml" -not -name "src" -not -name "build" -exec cp -r {} "$SRC_DIR/" \;
+
+# 4. Execute Build
+echo "--- Running build in Docker ($DOCKER_IMAGE) ---"
+# Ensure build.sh is executable
+chmod +x "$SRC_DIR/build.sh"
+
+docker run --rm \
+    -v "$(pwd)/$SRC_DIR:/work" \
+    -w /work \
+    "$DOCKER_IMAGE" \
+    bash build.sh
+
+# 5. Move output to build/
+if [ -d "$SRC_DIR/dist" ]; then
+    echo "--- Moving output to build/ ---"
+    rm -rf "$BUILD_DIR"
+    mv "$SRC_DIR/dist" "$BUILD_DIR"
+    echo "Success! Build output is in '$BUILD_DIR'"
+else
+    echo "Error: Build did not produce a 'dist/' directory."
+    exit 1
+fi
+
+# Cleanup build.sh from src
+rm -f "$SRC_DIR/build.sh"
