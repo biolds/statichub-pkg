@@ -146,6 +146,7 @@ chmod +x "$SRC_DIR/build.sh"
 
 docker run --rm \
     -v "$(pwd)/$SRC_DIR:/work" \
+    -v "$(pwd)/$PKG_DIR:/pkg:ro" \
     -w /work \
     "$DOCKER_IMAGE" \
     bash build.sh
