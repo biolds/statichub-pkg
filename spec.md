@@ -14,10 +14,10 @@ It is cloned locally by the `statichub-cli` and kept up to date via `statichub u
 
 **Default local clone paths:**
 
-| OS      | Path                                            |
-| ------- | ----------------------------------------------- |
-| Linux   | `~/.local/share/statichub/repo/`                |
-| macOS   | `~/Library/Application Support/statichub/repo/` |
+| OS    | Path                                            |
+| ----- | ----------------------------------------------- |
+| Linux | `~/.local/share/statichub/repo/`                |
+| macOS | `~/Library/Application Support/statichub/repo/` |
 
 ---
 
@@ -68,11 +68,11 @@ JSON file at the repository root containing repository metadata, including the `
 
 The CLI embeds its own `API_VERSION` and compares it on each operation:
 
-| Situation     | Behavior                                                              |
-| ------------- | --------------------------------------------------------------------- |
-| `cli == repo` | OK — normal operation                                                 |
-| `cli < repo`  | **Blocking error** — CLI too old, user must upgrade                   |
-| `cli > repo`  | **Non-blocking warning** — repo behind API, user should run `update`  |
+| Situation     | Behavior                                                             |
+| ------------- | -------------------------------------------------------------------- |
+| `cli == repo` | OK — normal operation                                                |
+| `cli < repo`  | **Blocking error** — CLI too old, user must upgrade                  |
+| `cli > repo`  | **Non-blocking warning** — repo behind API, user should run `update` |
 
 ---
 
@@ -84,17 +84,17 @@ The CLI embeds its own `API_VERSION` and compares it on each operation:
 title: "CyberChef"
 description: "Swiss army knife for data operations"
 homepage: https://gchq.github.io/CyberChef/
-live_url: "https://cyberchef.org/"  # optional — public live instance
+live_url: "https://cyberchef.org/" # optional — public live instance
 license: Apache-2.0
 tags:
   - security
   - encoding
 
 source:
-  type: github_release  # archive | github_release | gitlab_release | git | custom
+  type: github_release # archive | github_release | gitlab_release | git | custom
   # ... type-specific fields (see below)
 
-docker_image: "node:22-alpine"  # required when build.sh is present — Docker image used to run the build
+docker_image: "node:22-alpine" # required when build.sh is present — Docker image used to run the build
 ```
 
 **Required fields:** `title`, `description`, `license`, `source.type`.
@@ -117,10 +117,10 @@ Download and extract an archive (zip, tar.gz, etc.).
 source:
   type: archive
   url: "https://docs.python.org/3.7/archives/python-3.7.18-docs-html.zip"
-  format: zip      # zip | tar.gz | tar.bz2 | tar.xz — auto-detected if omitted
-  strip: 1         # path components to strip on extraction (default: 0)
+  format: zip # zip | tar.gz | tar.bz2 | tar.xz — auto-detected if omitted
+  strip: 1 # path components to strip on extraction (default: 0)
 
-upstream_version: "3.7.18"  # required — version encoded in the URL
+upstream_version: "3.7.18" # required — version encoded in the URL
 ```
 
 Update detection: compare `upstream_version` in `meta.yaml` against `catalog.json`. No network request needed.
@@ -146,8 +146,8 @@ Update detection: `HEAD` request → read `ETag`, `Last-Modified`, or `Content-L
 source:
   type: github_release
   repo: "gchq/CyberChef"
-  asset: 'CyberChef_v.*\.zip'  # regexp matched against asset URLs (see WARNING below)
-  format: zip                    # optional, auto-detected
+  asset: 'CyberChef_v.*\.zip' # regexp matched against asset URLs (see WARNING below)
+  format: zip # optional, auto-detected
   strip: 0
 ```
 
@@ -165,11 +165,11 @@ If `asset` is omitted: the single entry in `assets[]` is used automatically; if 
 >
 > Example for `excalidraw/excalidraw` at `v0.18.0`:
 >
-> | Field | Value |
-> |-------|-------|
+> | Field                            | Value                                                                                      |
+> | -------------------------------- | ------------------------------------------------------------------------------------------ |
 > | `assets[0].browser_download_url` | `https://github.com/excalidraw/excalidraw/releases/download/v0.18.0/excalidraw-0.18.0.tgz` |
-> | `tarball_url` | `https://api.github.com/repos/excalidraw/excalidraw/tarball/v0.18.0` |
-> | `zipball_url` | `https://api.github.com/repos/excalidraw/excalidraw/zipball/v0.18.0` |
+> | `tarball_url`                    | `https://api.github.com/repos/excalidraw/excalidraw/tarball/v0.18.0`                       |
+> | `zipball_url`                    | `https://api.github.com/repos/excalidraw/excalidraw/zipball/v0.18.0`                       |
 >
 > Note that `tarball_url` points to `api.github.com`, **not** to the `github.com/…/archive/…` URL shown in the web UI download section.
 
@@ -189,10 +189,11 @@ Same as `github_release` but uses the GitLab releases API.
 source:
   type: git
   url: "https://github.com/excalidraw/excalidraw"
-  ref: "master"  # branch, tag, or commit SHA
+  ref: "master" # branch, tag, or commit SHA
 ```
 
 Update detection:
+
 - **Branch:** `git ls-remote` → compare SHA with `catalog.json`.
 - **Tag:** fixed version, updated only when `meta.yaml` is modified via PR.
 - **Commit SHA:** never updated automatically.
@@ -210,7 +211,7 @@ With `build.sh`: shallow clone into temp dir, `build.sh` produces `./dist/`.
 source:
   type: custom
 
-upstream_version: "1.2.3"  # required — updated manually
+upstream_version: "1.2.3" # required — updated manually
 ```
 
 Update detection: compare `upstream_version` in `meta.yaml` against `catalog.json`.
@@ -224,13 +225,15 @@ When present, `build.sh` is executed by the CLI in a temporary working directory
 
 By default, `build.sh` runs inside an ephemeral Docker container (`docker run --rm`) using the image declared in `docker_image`, with the temp dir mounted as the working directory. The `--no-docker` flag on `install`/`upgrade` bypasses Docker and runs `build.sh` directly on the host.
 
-| Source type      | Without `build.sh`                      | With `build.sh`                                |
-| ---------------- | --------------------------------------- | ---------------------------------------------- |
-| `archive`        | Extract → copy `dist/` to dest          | Extract to temp dir → `build.sh` → `dist/`     |
-| `github_release` | Resolve + download + extract → `dist/`  | Same + `build.sh` → `dist/`                    |
-| `gitlab_release` | Resolve + download + extract → `dist/`  | Same + `build.sh` → `dist/`                    |
-| `git`            | Shallow clone → copy files to `dist/`   | Shallow clone to temp dir → `build.sh` → `dist/` |
-| `custom`         | **Error** — `build.sh` required         | `build.sh` produces `dist/` from empty temp dir |
+The CLI provides the `STATICHUB_APP_PREFIX` environment variable containing the full access path (e.g., `/prefix/category/package/`). Package maintainers should use this variable to configure the application's base URL (e.g., via Vite's `--base` flag or Webpack's `publicPath`).
+
+| Source type      | Without `build.sh`                     | With `build.sh`                                  |
+| ---------------- | -------------------------------------- | ------------------------------------------------ |
+| `archive`        | Extract → copy `dist/` to dest         | Extract to temp dir → `build.sh` → `dist/`       |
+| `github_release` | Resolve + download + extract → `dist/` | Same + `build.sh` → `dist/`                      |
+| `gitlab_release` | Resolve + download + extract → `dist/` | Same + `build.sh` → `dist/`                      |
+| `git`            | Shallow clone → copy files to `dist/`  | Shallow clone to temp dir → `build.sh` → `dist/` |
+| `custom`         | **Error** — `build.sh` required        | `build.sh` produces `dist/` from empty temp dir  |
 
 ---
 
@@ -241,6 +244,7 @@ Served from `<dest>/` after the first `statichub install`. The CLI copies it the
 It reads `./catalog.json` at load time (client-side JavaScript) with no external requests.
 
 **Features:**
+
 - Cards with title, description, tags, installed version, install date.
 - Each card links to `./{path}/index.html`.
 - Tag filtering, text search, alphabetical / install date sorting.
@@ -307,18 +311,18 @@ Generates `staticweb.json` from all package metadata and publishes it to the `st
 }
 ```
 
-| Field          | Always present | Description                                                                 |
-| -------------- | -------------- | --------------------------------------------------------------------------- |
-| `path`         | yes            | Relative path under `packages/`                                             |
-| `title`        | yes            |                                                                             |
-| `description`  | yes            |                                                                             |
-| `license`      | yes            |                                                                             |
-| `tags`         | yes            | Empty array if not set                                                      |
-| `source_type`  | yes            | Value of `source.type`                                                      |
-| `homepage`     | no             | Omitted if not set in `meta.yaml`                                           |
-| `live_url`     | no             | Omitted if not set in `meta.yaml`                                           |
+| Field          | Always present | Description                                                                                 |
+| -------------- | -------------- | ------------------------------------------------------------------------------------------- |
+| `path`         | yes            | Relative path under `packages/`                                                             |
+| `title`        | yes            |                                                                                             |
+| `description`  | yes            |                                                                                             |
+| `license`      | yes            |                                                                                             |
+| `tags`         | yes            | Empty array if not set                                                                      |
+| `source_type`  | yes            | Value of `source.type`                                                                      |
+| `homepage`     | no             | Omitted if not set in `meta.yaml`                                                           |
+| `live_url`     | no             | Omitted if not set in `meta.yaml`                                                           |
 | `source_repo`  | no             | `source.repo` for `github_release`/`gitlab_release`, owner/repo from `source.url` for `git` |
-| `github_stars` | no             | Only for `github_release` and `git` hosted on `github.com`                  |
+| `github_stars` | no             | Only for `github_release` and `git` hosted on `github.com`                                  |
 
 ---
 
@@ -336,12 +340,12 @@ Generates `staticweb.json` from all package metadata and publishes it to the `st
 
 ## Constraints
 
-| Constraint           | Decision                                                                              |
-| -------------------- | ------------------------------------------------------------------------------------- |
-| `api_version`        | Explicit contract in `manifest.json`; blocking error if CLI is too old                                   |
-| `build.sh` optional  | Required only for `git` (with build step) and `custom`                                |
-| `docker_image` required | Required in `meta.yaml` whenever `build.sh` is present; validated by CI             |
-| No Windows support   | `build.sh` requires bash; Windows out of scope                                        |
-| Rollback on failure  | CLI never modifies `<dest>/{path}/` or `catalog.json` if build fails                  |
-| Homepage versioned   | `index.html` is part of this repo and updated in `<dest>/` after `statichub update`   |
-| **Self-contained**   | Every installed package must work without Internet access; no CDN, no remote resources, no external API calls at runtime — all assets must be bundled in `dist/` |
+| Constraint              | Decision                                                                                                                                                         |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api_version`           | Explicit contract in `manifest.json`; blocking error if CLI is too old                                                                                           |
+| `build.sh` optional     | Required only for `git` (with build step) and `custom`                                                                                                           |
+| `docker_image` required | Required in `meta.yaml` whenever `build.sh` is present; validated by CI                                                                                          |
+| No Windows support      | `build.sh` requires bash; Windows out of scope                                                                                                                   |
+| Rollback on failure     | CLI never modifies `<dest>/{path}/` or `catalog.json` if build fails                                                                                             |
+| Homepage versioned      | `index.html` is part of this repo and updated in `<dest>/` after `statichub update`                                                                              |
+| **Self-contained**      | Every installed package must work without Internet access; no CDN, no remote resources, no external API calls at runtime — all assets must be bundled in `dist/` |
