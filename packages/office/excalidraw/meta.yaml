@@ -16,7 +16,3 @@ source:
   strip: 1
 
 docker_image: "node:22"
-
-dependencies:
-  - node
-  - npm
