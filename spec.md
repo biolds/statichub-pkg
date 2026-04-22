@@ -223,7 +223,7 @@ Update detection: compare `upstream_version` in `meta.yaml` against `catalog.jso
 
 When present, `build.sh` is executed by the CLI in a temporary working directory with the source already present (extracted archive, cloned repo, or empty dir for `custom`). It **must produce `./dist/`** containing the final static files to deploy.
 
-By default, `build.sh` runs inside an ephemeral Docker container (`docker run --rm`) using the image declared in `docker_image`, with the temp dir mounted as the working directory. The `--no-docker` flag on `install`/`upgrade` bypasses Docker and runs `build.sh` directly on the host.
+By default, `build.sh` runs inside an ephemeral Docker container (`docker run --rm -v <tmpdir>:/work -v <pkgdefdir>:/pkg:ro -w /work <docker_image> sh build.sh`) using the image declared in `docker_image`, with the temp dir mounted as the working directory and the package definition directory (containing `meta.yaml`/`build.sh`) mounted read-only on `/pkg`. The `--no-docker` flag on `install`/`upgrade` bypasses Docker and runs `build.sh` directly on the host.
 
 The CLI provides the `STATICHUB_APP_PREFIX` environment variable containing the full access path (e.g., `/prefix/category/package/`). Package maintainers should use this variable to configure the application's base URL (e.g., via Vite's `--base` flag or Webpack's `publicPath`).
 
