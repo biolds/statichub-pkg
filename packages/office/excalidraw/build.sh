@@ -9,9 +9,20 @@ umask 0022
 # strips the top-level directory, and runs this script from the repo root.
 # Output: ./dist/ with all assets bundled (no CDN, no remote resources).
 
+PATCH_FILE="0001-feat-app-support-custom-base-URL-for-hosting-under-a.patch"
+
+if [ -f "$PATCH_FILE" ]; then
+  git apply "$PATCH_FILE"
+elif [ -f "/pkg/$PATCH_FILE" ]; then
+  git apply "/pkg/$PATCH_FILE"
+else
+  printf 'Missing patch file: %s\n' "$PATCH_FILE" >&2
+  exit 1
+fi
+
 yarn install --network-timeout 600000
 
-yarn build:app:docker
+VITE_APP_BASE_URL="${STATICHUB_APP_PREFIX:-/}" yarn build:app:docker
 
 # Cleanup existing dist to avoid mv issues
 rm -rf dist
