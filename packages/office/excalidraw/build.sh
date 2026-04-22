@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Set umask to ensure standard permissions (files: 644, dirs: 755)
+umask 0022
+
 # Build Excalidraw as a self-contained static app.
 # The CLI downloads the source tarball from the GitHub release (tarball_url),
 # strips the top-level directory, and runs this script from the repo root.
@@ -10,4 +13,13 @@ yarn install --network-timeout 600000
 
 yarn build:app:docker
 
+# Cleanup existing dist to avoid mv issues
+rm -rf dist
+
+# Move the build output to dist
 mv excalidraw-app/build dist
+
+# Fix ownership so the host user can manage the files (Docker runs as root)
+# We use the owner of the current directory (host mount) to set the correct UID/GID
+HOST_OWNER=$(stat -c '%u:%g' .)
+chown -R "$HOST_OWNER" dist
