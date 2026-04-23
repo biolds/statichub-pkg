@@ -12,7 +12,6 @@ tags:
 source:
   type: git
   url: "https://github.com/excalidraw/excalidraw"
-  ref: "v.*"
-  ref_type: tag_pattern
+  ref_pattern: "^refs/tags/v.*$"
 
 docker_image: "node:22"

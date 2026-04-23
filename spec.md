@@ -189,14 +189,12 @@ Same as `github_release` but uses the GitLab releases API.
 source:
   type: git
   url: "https://github.com/excalidraw/excalidraw"
-  ref: "master" # branch, tag, or commit SHA
+  ref_pattern: "^refs/tags/v.*$" # regexp matched against full remote ref names
 ```
 
-Update detection:
+`ref_pattern` is a regular expression matched against the full remote ref names returned by `git ls-remote --refs`. Only branch refs under `refs/heads/*` and tag refs under `refs/tags/*` are considered.
 
-- **Branch:** `git ls-remote` → compare SHA with `catalog.json`.
-- **Tag:** fixed version, updated only when `meta.yaml` is modified via PR.
-- **Commit SHA:** never updated automatically.
+Update detection: resolve `ref_pattern` again. If multiple refs match, the CLI selects the newest one by Git date; ties are resolved by lexicographic ref name. A git package is up to date when both the resolved `git_ref` and `git_commit` stored in `catalog.json` still match the remote resolution result. `version` remains the short display name of the resolved ref.
 
 Without `build.sh`: shallow clone, files copied to `dist/`.
 With `build.sh`: shallow clone into temp dir, `build.sh` produces `./dist/`.
@@ -268,7 +266,7 @@ Validates any package added or modified in the PR/push.
        - `source.type: custom` → `build.sh` must be present.
        - `source.type: archive` with no `upstream_version` → `source.url` must be present.
        - `source.type: github_release` → `source.repo` must be present.
-       - `source.type: git` → `source.url` and `source.ref` must be present.
+        - `source.type: git` → `source.url` and `source.ref_pattern` must be present.
      - If `build.sh` is present → `docker_image` must be declared.
    - If `build.sh` is present: assert it is executable (`test -x build.sh`).
    - Install the CLI from the latest GitHub release of `statichub-cli` (download pre-compiled asset for the runner OS/arch).
