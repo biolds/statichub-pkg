@@ -225,7 +225,7 @@ When present, `build.sh` is executed by the CLI in a temporary working directory
 
 By default, `build.sh` runs inside an ephemeral Docker container (`docker run --rm -v <tmpdir>:/work -v <pkgdefdir>:/pkg:ro -w /work <docker_image> sh build.sh`) using the image declared in `docker_image`, with the temp dir mounted as the working directory and the package definition directory (containing `meta.yaml`/`build.sh`) mounted read-only on `/pkg`. The `--no-docker` flag on `install`/`upgrade` bypasses Docker and runs `build.sh` directly on the host.
 
-The CLI provides the `STATICHUB_APP_PREFIX` environment variable containing the full access path (e.g., `/prefix/category/package/`). Package maintainers should use this variable to configure the application's base URL (e.g., via Vite's `--base` flag or Webpack's `publicPath`).
+The CLI provides the `STATICHUB_PREFIX` environment variable containing the full access path (e.g., `/prefix/category/package/`). Package maintainers should use this variable to configure the application's base URL (e.g., via Vite's `--base` flag or Webpack's `publicPath`).
 
 | Source type      | Without `build.sh`                     | With `build.sh`                                  |
 | ---------------- | -------------------------------------- | ------------------------------------------------ |

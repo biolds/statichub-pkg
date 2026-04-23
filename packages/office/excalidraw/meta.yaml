@@ -10,9 +10,9 @@ tags:
   - diagram
 
 source:
-  type: github_release
-  repo: "excalidraw/excalidraw"
-  asset: 'api\.github\.com/repos/excalidraw/excalidraw/tarball/'
-  strip: 1
+  type: git
+  url: "https://github.com/excalidraw/excalidraw"
+  ref: "v.*"
+  ref_type: tag_pattern
 
 docker_image: "node:22"

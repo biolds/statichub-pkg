@@ -20,9 +20,11 @@ else
   exit 1
 fi
 
+git config --global --add safe.directory /work
+
 yarn install --network-timeout 600000
 
-VITE_APP_BASE_URL="${STATICHUB_APP_PREFIX:-/}" yarn build:app:docker
+VITE_APP_BASE_URL="$STATICHUB_PREFIX" npx yarn build:app:docker
 
 # Cleanup existing dist to avoid mv issues
 rm -rf dist

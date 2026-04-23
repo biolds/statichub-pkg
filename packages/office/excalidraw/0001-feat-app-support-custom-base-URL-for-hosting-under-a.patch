@@ -1,0 +1,162 @@
+From abe47701a1f6d419f5e841139a376478d7162d68 Mon Sep 17 00:00:00 2001
+From: Laurent Defert <laurent_defert@yahoo.fr>
+Date: Thu, 23 Apr 2026 09:56:56 +0200
+Subject: [PATCH] feat(app): support custom base URL for hosting under a path
+ prefix
+
+---
+ excalidraw-app/App.tsx         |  3 ++-
+ excalidraw-app/index.html      | 25 ++++++++++++++++++++-----
+ excalidraw-app/vite.config.mts | 26 +++++++++++++++-----------
+ 3 files changed, 37 insertions(+), 17 deletions(-)
+
+diff --git a/excalidraw-app/App.tsx b/excalidraw-app/App.tsx
+index 2cb6e771..d382d59b 100644
+--- a/excalidraw-app/App.tsx
++++ b/excalidraw-app/App.tsx
+@@ -1137,7 +1137,8 @@ const ExcalidrawWrapper = () => {
+ 
+ const ExcalidrawApp = () => {
+   const isCloudExportWindow =
+-    window.location.pathname === "/excalidraw-plus-export";
++    window.location.pathname ===
++    `${import.meta.env.BASE_URL}excalidraw-plus-export`.replace(/\/+/g, "/");
+   if (isCloudExportWindow) {
+     return <ExcalidrawPlusIframeExport />;
+   }
+diff --git a/excalidraw-app/index.html b/excalidraw-app/index.html
+index 750824c5..35c721a5 100644
+--- a/excalidraw-app/index.html
++++ b/excalidraw-app/index.html
+@@ -1,4 +1,4 @@
+-<!DOCTYPE html>
++<!doctype html>
+ <html lang="en">
+   <head>
+     <meta charset="utf-8" />
+@@ -107,7 +107,8 @@
+       // Putting into index.html for best performance (can't redirect on server
+       // due to location.hash checks).
+       if (
+-        window.location.pathname === "/" &&
++        (window.location.pathname === "/" ||
++          window.location.pathname === "%BASE_URL%") &&
+         !window.location.hash &&
+         !window.location.search &&
+         // if its present redirect
+@@ -133,9 +134,23 @@
+     </script>
+     <% } %>
+ 
+-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
++    <link
++      rel="apple-touch-icon"
++      sizes="180x180"
++      href="./apple-touch-icon.png"
++    />
++    <link
++      rel="icon"
++      type="image/png"
++      sizes="32x32"
++      href="./favicon-32x32.png"
++    />
++    <link
++      rel="icon"
++      type="image/png"
++      sizes="16x16"
++      href="./favicon-16x16.png"
++    />
+ 
+     <!-- Excalidraw version -->
+     <meta name="version" content="{version}" />
+diff --git a/excalidraw-app/vite.config.mts b/excalidraw-app/vite.config.mts
+index 57a4d19e..0bbecbeb 100644
+--- a/excalidraw-app/vite.config.mts
++++ b/excalidraw-app/vite.config.mts
+@@ -21,11 +21,15 @@ export default defineConfig(({ mode }) => {
+     // We need to specify the envDir since now there are no
+     //more located in parallel with the vite.config.ts file but in parent dir
+     envDir: "../",
++    base: envVars.VITE_APP_BASE_URL || "/",
+     resolve: {
+       alias: [
+         {
+           find: /^@excalidraw\/excalidraw$/,
+-          replacement: path.resolve(__dirname, "../packages/excalidraw/index.tsx"),
++          replacement: path.resolve(
++            __dirname,
++            "../packages/excalidraw/index.tsx",
++          ),
+         },
+         {
+           find: /^@excalidraw\/excalidraw\/(.*?)/,
+@@ -196,21 +200,21 @@ export default defineConfig(({ mode }) => {
+               type: "image/png",
+             },
+           ],
+-          start_url: "/",
+-          id:"excalidraw",
++          start_url: "./",
++          id: "excalidraw",
+           display: "standalone",
+           theme_color: "#121212",
+           background_color: "#ffffff",
+           file_handlers: [
+             {
+-              action: "/",
++              action: "./",
+               accept: {
+                 "application/vnd.excalidraw+json": [".excalidraw"],
+               },
+             },
+           ],
+           share_target: {
+-            action: "/web-share-target",
++            action: "web-share-target",
+             method: "POST",
+             enctype: "multipart/form-data",
+             params: {
+@@ -228,32 +232,32 @@ export default defineConfig(({ mode }) => {
+           },
+           screenshots: [
+             {
+-              src: "/screenshots/virtual-whiteboard.png",
++              src: "screenshots/virtual-whiteboard.png",
+               type: "image/png",
+               sizes: "462x945",
+             },
+             {
+-              src: "/screenshots/wireframe.png",
++              src: "screenshots/wireframe.png",
+               type: "image/png",
+               sizes: "462x945",
+             },
+             {
+-              src: "/screenshots/illustration.png",
++              src: "screenshots/illustration.png",
+               type: "image/png",
+               sizes: "462x945",
+             },
+             {
+-              src: "/screenshots/shapes.png",
++              src: "screenshots/shapes.png",
+               type: "image/png",
+               sizes: "462x945",
+             },
+             {
+-              src: "/screenshots/collaboration.png",
++              src: "screenshots/collaboration.png",
+               type: "image/png",
+               sizes: "462x945",
+             },
+             {
+-              src: "/screenshots/export.png",
++              src: "screenshots/export.png",
+               type: "image/png",
+               sizes: "462x945",
+             },
+-- 
+2.47.3
+
