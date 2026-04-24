@@ -14,6 +14,8 @@ PKG_DIR="packages/$PKG_PATH"
 META_FILE="$PKG_DIR/meta.yaml"
 BUILD_SH="$PKG_DIR/build.sh"
 SRC_DIR="$PKG_DIR/src"
+WORK_DIR="$PKG_DIR/work"
+DIST_DIR="$PKG_DIR/dist"
 BUILD_DIR="$PKG_DIR/build"
 
 resolve_latest_matching_git_tag() {
@@ -179,33 +181,39 @@ fi
 
 # 3. Prepare Build
 echo "--- Preparing build ---"
-# Copy build.sh and other package files to src/
-# Exclude meta.yaml, src/, build/
-find "$PKG_DIR" -maxdepth 1 -not -path "$PKG_DIR" -not -name "meta.yaml" -not -name "src" -not -name "build" -exec cp -r {} "$SRC_DIR/" \;
+# Create fresh work/ and dist/ directories for the build run.
+rm -rf "$WORK_DIR" "$DIST_DIR"
+mkdir -p "$WORK_DIR" "$DIST_DIR"
+cp -a "$SRC_DIR"/. "$WORK_DIR/"
+
+# Copy build.sh and other package files into work/.
+# Exclude meta.yaml, src/, work/, dist/, build/
+find "$PKG_DIR" -maxdepth 1 -not -path "$PKG_DIR" -not -name "meta.yaml" -not -name "src" -not -name "work" -not -name "dist" -not -name "build" -exec cp -r {} "$WORK_DIR/" \;
 
 # 4. Execute Build
 echo "--- Running build in Docker ($DOCKER_IMAGE) ---"
 # Ensure build.sh is executable
-chmod +x "$SRC_DIR/build.sh"
+chmod +x "$WORK_DIR/build.sh"
 
 docker run --rm \
   -e "STATICHUB_PREFIX=$BUILD_PREFIX" \
-  -v "$(pwd)/$SRC_DIR:/work" \
+  -e "STATICHUB_WORKDIR=/work" \
+  -e "STATICHUB_DISTDIR=/dist" \
+  -e "STATICHUB_PKG=/pkg" \
+  -v "$(pwd)/$WORK_DIR:/work" \
+  -v "$(pwd)/$DIST_DIR:/dist" \
   -v "$(pwd)/$PKG_DIR:/pkg:ro" \
   -w /work \
   "$DOCKER_IMAGE" \
   bash build.sh
 
 # 5. Move output to build/
-if [ -d "$SRC_DIR/dist" ]; then
+if [ -d "$DIST_DIR" ] && [ -n "$(ls -A "$DIST_DIR")" ]; then
   echo "--- Moving output to build/ ---"
   rm -rf "$BUILD_DIR"
-  mv "$SRC_DIR/dist" "$BUILD_DIR"
+  mv "$DIST_DIR" "$BUILD_DIR"
   echo "Success! Build output is in '$BUILD_DIR'"
 else
-  echo "Error: Build did not produce a 'dist/' directory."
+  echo "Error: Build did not produce any output in '/dist'."
   exit 1
 fi
-
-# Cleanup build.sh from src
-rm -f "$SRC_DIR/build.sh"

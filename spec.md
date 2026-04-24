@@ -10,7 +10,7 @@
 
 It is cloned locally by the `statichub-cli` and kept up to date via `statichub update` (git pull).
 
-**Fundamental constraint:** every installed package must be **self-contained** — once installed in `<dest>/{path}/`, it must work fully without any Internet connection. No CDN, no external API calls, no remotely loaded resources (fonts, scripts, stylesheets, images). All dependencies must be bundled inside `dist/`.
+**Fundamental constraint:** every installed package must be **self-contained** — once installed in `<dest>/{path}/`, it must work fully without any Internet connection. No CDN, no external API calls, no remotely loaded resources (fonts, scripts, stylesheets, images). All dependencies must be bundled into the final installed files; for packages with `build.sh`, that means writing them into `STATICHUB_DISTDIR`.
 
 **Default local clone paths:**
 
@@ -30,7 +30,7 @@ packages/
   <category>/
     <package-name>/
       meta.yaml          # package metadata and source definition
-      build.sh           # optional build script (produces ./dist/)
+      build.sh           # optional build script (writes to STATICHUB_DISTDIR)
 ```
 
 Example packages:
@@ -196,8 +196,8 @@ source:
 
 Update detection: resolve `ref_pattern` again. If multiple refs match, the CLI selects the newest one by Git date; ties are resolved by lexicographic ref name. A git package is up to date when both the resolved `git_ref` and `git_commit` stored in `catalog.json` still match the remote resolution result. `version` remains the short display name of the resolved ref.
 
-Without `build.sh`: shallow clone, files copied to `dist/`.
-With `build.sh`: shallow clone into temp dir, `build.sh` produces `./dist/`.
+Without `build.sh`: shallow clone, files copied directly to `<dest>/{path}/`.
+With `build.sh`: shallow clone into temp dir, `build.sh` writes its output to `STATICHUB_DISTDIR`.
 
 ---
 
@@ -213,25 +213,32 @@ upstream_version: "1.2.3" # required — updated manually
 ```
 
 Update detection: compare `upstream_version` in `meta.yaml` against `catalog.json`.
-`build.sh` handles all downloading, building, and producing `./dist/`.
+`build.sh` handles all downloading, building, and writing the final static files into `STATICHUB_DISTDIR`.
 
 ---
 
 ## `build.sh` Contract
 
-When present, `build.sh` is executed by the CLI in a temporary working directory with the source already present (extracted archive, cloned repo, or empty dir for `custom`). It **must produce `./dist/`** containing the final static files to deploy.
+When present, `build.sh` is executed by the CLI in a temporary working directory with the source already present (extracted archive, cloned repo, or empty dir for `custom`). It **must write the final static files into `STATICHUB_DISTDIR`**.
 
-By default, `build.sh` runs inside an ephemeral Docker container (`docker run --rm -v <tmpdir>:/work -v <pkgdefdir>:/pkg:ro -w /work <docker_image> bash build.sh`) using the image declared in `docker_image`, with the temp dir mounted as the working directory and the package definition directory (containing `meta.yaml`/`build.sh`) mounted read-only on `/pkg`. The `--no-docker` flag on `install`/`upgrade` bypasses Docker and runs `build.sh` directly on the host.
+By default, `build.sh` runs inside an ephemeral Docker container (`docker run --rm -e STATICHUB_WORKDIR=/work -e STATICHUB_DISTDIR=/dist -e STATICHUB_PKG=/pkg -v <workdir>:/work -v <distdir>:/dist -v <pkgdefdir>:/pkg:ro -w /work <docker_image> bash build.sh`) using the image declared in `docker_image`. The `--no-docker` flag on `install`/`upgrade` bypasses Docker and runs `build.sh` directly on the host with temporary directories exposed through the same environment variables.
 
-The CLI provides the `STATICHUB_PREFIX` environment variable containing the full access path (e.g., `/prefix/category/package/`). Package maintainers should use this variable to configure the application's base URL (e.g., via Vite's `--base` flag or Webpack's `publicPath`).
+The CLI provides four build variables:
+
+- `STATICHUB_PREFIX` contains the full access path (e.g., `/prefix/category/package/`).
+- `STATICHUB_WORKDIR` points to the prepared source tree.
+- `STATICHUB_DISTDIR` points to the output directory that must be populated.
+- `STATICHUB_PKG` points to the package definition directory.
+
+Package maintainers should use these variables instead of hard-coded `/work`, `/dist`, or `/pkg` paths.
 
 | Source type      | Without `build.sh`                     | With `build.sh`                                  |
 | ---------------- | -------------------------------------- | ------------------------------------------------ |
-| `archive`        | Extract → copy `dist/` to dest         | Extract to temp dir → `build.sh` → `dist/`       |
-| `github_release` | Resolve + download + extract → `dist/` | Same + `build.sh` → `dist/`                      |
-| `gitlab_release` | Resolve + download + extract → `dist/` | Same + `build.sh` → `dist/`                      |
-| `git`            | Shallow clone → copy files to `dist/`  | Shallow clone to temp dir → `build.sh` → `dist/` |
-| `custom`         | **Error** — `build.sh` required        | `build.sh` produces `dist/` from empty temp dir  |
+| `archive`        | Extract → copy files to dest           | Extract to temp dir → `build.sh` → `STATICHUB_DISTDIR`       |
+| `github_release` | Resolve + download + extract → copy files to dest | Same + `build.sh` → `STATICHUB_DISTDIR`                      |
+| `gitlab_release` | Resolve + download + extract → copy files to dest | Same + `build.sh` → `STATICHUB_DISTDIR`                      |
+| `git`            | Shallow clone → copy files to dest     | Shallow clone to temp dir → `build.sh` → `STATICHUB_DISTDIR` |
+| `custom`         | **Error** — `build.sh` required        | `build.sh` populates `STATICHUB_DISTDIR` from empty temp dir  |
 
 ---
 
@@ -346,4 +353,4 @@ Generates `staticweb.json` from all package metadata and publishes it to the `st
 | No Windows support      | `build.sh` requires bash; Windows out of scope                                                                                                                   |
 | Rollback on failure     | CLI never modifies `<dest>/{path}/` or `catalog.json` if build fails                                                                                             |
 | Homepage versioned      | `index.html` is part of this repo and updated in `<dest>/` after `statichub update`                                                                              |
-| **Self-contained**      | Every installed package must work without Internet access; no CDN, no remote resources, no external API calls at runtime — all assets must be bundled in `dist/` |
+| **Self-contained**      | Every installed package must work without Internet access; no CDN, no remote resources, no external API calls at runtime — all assets must be bundled into the final installed files, and into `STATICHUB_DISTDIR` when `build.sh` is used |

@@ -3,6 +3,8 @@ set -euo pipefail
 
 shopt -s nullglob
 
+DISTDIR="${STATICHUB_DISTDIR:?STATICHUB_DISTDIR is required}"
+
 html_files=(CyberChef_v*.html)
 
 if [ ${#html_files[@]} -ne 1 ]; then
@@ -10,13 +12,13 @@ if [ ${#html_files[@]} -ne 1 ]; then
   exit 1
 fi
 
-mkdir -p dist
-mv "${html_files[0]}" dist/index.html
+mkdir -p "$DISTDIR"
+mv "${html_files[0]}" "$DISTDIR/index.html"
 
 for entry in *; do
-  if [ "$entry" = "build.sh" ] || [ "$entry" = "dist" ]; then
+  if [ "$entry" = "build.sh" ]; then
     continue
   fi
 
-  mv "$entry" dist/
+  mv "$entry" "$DISTDIR/"
 done
