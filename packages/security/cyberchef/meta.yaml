@@ -1,0 +1,19 @@
+title: "CyberChef"
+description: "Cyber Swiss Army knife for encoding, encryption, compression, and data analysis"
+homepage: "https://gchq.github.io/CyberChef/"
+live_url: "https://cyberchef.org/"
+license: Apache-2.0
+tags:
+  - security
+  - encoding
+  - encryption
+  - forensics
+
+source:
+  type: github_release
+  repo: "gchq/CyberChef"
+  asset: 'CyberChef_v.*\.zip'
+  format: zip
+  strip: 0
+
+docker_image: "bash:5.2"
