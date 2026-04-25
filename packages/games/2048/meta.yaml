@@ -1,0 +1,15 @@
+title: "2048"
+description: "Classic sliding tile puzzle game where matching numbers merge toward 2048"
+homepage: "https://github.com/gabrielecirulli/2048"
+live_url: "https://gabrielecirulli.github.io/2048/"
+license: MIT
+tags:
+  - games
+  - puzzle
+  - numbers
+  - offline
+
+source:
+  type: git
+  url: "https://github.com/gabrielecirulli/2048"
+  ref_pattern: "^refs/heads/master$"
