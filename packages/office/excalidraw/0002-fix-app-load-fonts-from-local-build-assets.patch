@@ -1,0 +1,124 @@
+From 6556e257d7e9beaa23a0041296e0c752c49f3fd0 Mon Sep 17 00:00:00 2001
+From: Laurent Defert <laurent_defert@yahoo.fr>
+Date: Fri, 24 Apr 2026 21:23:36 +0200
+Subject: [PATCH 2/2] fix(app): load fonts from local build assets
+
+---
+ .../excalidraw/fonts/ExcalidrawFontFace.ts    |  7 +++-
+ scripts/woff2/woff2-vite-plugins.js           | 32 ++++++-------------
+ 2 files changed, 15 insertions(+), 24 deletions(-)
+
+diff --git a/packages/excalidraw/fonts/ExcalidrawFontFace.ts b/packages/excalidraw/fonts/ExcalidrawFontFace.ts
+index 9d8b9f78..4ab4d20d 100644
+--- a/packages/excalidraw/fonts/ExcalidrawFontFace.ts
++++ b/packages/excalidraw/fonts/ExcalidrawFontFace.ts
+@@ -146,7 +146,12 @@ export class ExcalidrawFontFace {
+       return [new URL(uri)];
+     }
+ 
+-    // absolute assets paths, which are found in tests and excalidraw-app build, won't work with base url, so we are stripping initial slash away
++    if (uri.startsWith("/")) {
++      // Vite may already emit root-relative asset URLs that include BASE_URL.
++      // Re-appending EXCALIDRAW_ASSET_PATH would duplicate the path prefix.
++      return [new URL(uri, window.location.origin)];
++    }
++
+     const assetUrl: string = uri.replace(/^\/+/, "");
+     const urls: URL[] = [];
+ 
+diff --git a/scripts/woff2/woff2-vite-plugins.js b/scripts/woff2/woff2-vite-plugins.js
+index b62a76cf..b226f631 100644
+--- a/scripts/woff2/woff2-vite-plugins.js
++++ b/scripts/woff2/woff2-vite-plugins.js
+@@ -1,6 +1,4 @@
+-// define `EXCALIDRAW_ASSET_PATH` as a SSOT
+-const OSS_FONTS_CDN = "https://excalidraw.nyc3.cdn.digitaloceanspaces.com/oss/";
+-const OSS_FONTS_FALLBACK = "/";
++const LOCAL_FONTS_BASE = "%BASE_URL%";
+ 
+ /**
+  * Custom vite plugin for auto-prefixing `EXCALIDRAW_ASSET_PATH` woff2 fonts in `excalidraw-app`.
+@@ -24,9 +22,7 @@ module.exports.woff2BrowserPlugin = () => {
+ 
+       @font-face {
+         font-family: "Assistant";
+-        src: url(${OSS_FONTS_CDN}fonts/Assistant/Assistant-Regular.woff2)
+-            format("woff2"),
+-          url(./Assistant-Regular.woff2) format("woff2");
++        src: url(./Assistant/Assistant-Regular.woff2) format("woff2");
+         font-weight: 400;
+         style: normal;
+         display: swap;
+@@ -34,9 +30,7 @@ module.exports.woff2BrowserPlugin = () => {
+ 
+       @font-face {
+         font-family: "Assistant";
+-        src: url(${OSS_FONTS_CDN}fonts/Assistant/Assistant-Medium.woff2)
+-            format("woff2"),
+-          url(./Assistant-Medium.woff2) format("woff2");
++        src: url(./Assistant/Assistant-Medium.woff2) format("woff2");
+         font-weight: 500;
+         style: normal;
+         display: swap;
+@@ -44,9 +38,7 @@ module.exports.woff2BrowserPlugin = () => {
+ 
+       @font-face {
+         font-family: "Assistant";
+-        src: url(${OSS_FONTS_CDN}fonts/Assistant/Assistant-SemiBold.woff2)
+-            format("woff2"),
+-          url(./Assistant-SemiBold.woff2) format("woff2");
++        src: url(./Assistant/Assistant-SemiBold.woff2) format("woff2");
+         font-weight: 600;
+         style: normal;
+         display: swap;
+@@ -54,9 +46,7 @@ module.exports.woff2BrowserPlugin = () => {
+ 
+       @font-face {
+         font-family: "Assistant";
+-        src: url(${OSS_FONTS_CDN}fonts/Assistant/Assistant-Bold.woff2)
+-            format("woff2"),
+-          url(./Assistant-Bold.woff2) format("woff2");
++        src: url(./Assistant/Assistant-Bold.woff2) format("woff2");
+         font-weight: 700;
+         style: normal;
+         display: swap;
+@@ -67,17 +57,13 @@ module.exports.woff2BrowserPlugin = () => {
+         return code.replace(
+           "<!-- PLACEHOLDER:EXCALIDRAW_APP_FONTS -->",
+           `<script>
+-        // point into our CDN in prod, fallback to root (excalidraw.com) domain in case of issues
+-        window.EXCALIDRAW_ASSET_PATH = [
+-          "${OSS_FONTS_CDN}",
+-          "${OSS_FONTS_FALLBACK}",
+-        ];
++        window.EXCALIDRAW_ASSET_PATH = "${LOCAL_FONTS_BASE}";
+       </script>
+ 
+       <!-- Preload all default fonts to avoid swap on init -->
+       <link
+         rel="preload"
+-        href="${OSS_FONTS_CDN}fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2"
++        href="${LOCAL_FONTS_BASE}fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2"
+         as="font"
+         type="font/woff2"
+         crossorigin="anonymous"
+@@ -85,14 +71,14 @@ module.exports.woff2BrowserPlugin = () => {
+       <!-- For Nunito only preload the latin range, which should be good enough for now -->
+       <link
+         rel="preload"
+-        href="${OSS_FONTS_CDN}fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTQ3j6zbXWjgeg.woff2"
++        href="${LOCAL_FONTS_BASE}fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTQ3j6zbXWjgeg.woff2"
+         as="font"
+         type="font/woff2"
+         crossorigin="anonymous"
+       />
+       <link
+         rel="preload"
+-        href="${OSS_FONTS_CDN}fonts/ComicShanns/ComicShanns-Regular-279a7b317d12eb88de06167bd672b4b4.woff2"
++        href="${LOCAL_FONTS_BASE}fonts/ComicShanns/ComicShanns-Regular-279a7b317d12eb88de06167bd672b4b4.woff2"
+         as="font"
+         type="font/woff2"
+         crossorigin="anonymous"
+-- 
+2.47.3
+

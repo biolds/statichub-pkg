@@ -5,16 +5,21 @@ WORKDIR="${STATICHUB_WORKDIR:?STATICHUB_WORKDIR is required}"
 DISTDIR="${STATICHUB_DISTDIR:?STATICHUB_DISTDIR is required}"
 PKGDIR="${STATICHUB_PKG:?STATICHUB_PKG is required}"
 
-PATCH_FILE="0001-feat-app-support-custom-base-URL-for-hosting-under-a.patch"
+PATCH_FILES=(
+  "0001-feat-app-support-custom-base-URL-for-hosting-under-a.patch"
+  "0002-fix-app-load-fonts-from-local-build-assets.patch"
+)
 
-if [ -f "$PATCH_FILE" ]; then
-  git -c safe.directory="$WORKDIR" apply "$PATCH_FILE"
-elif [ -f "$PKGDIR/$PATCH_FILE" ]; then
-  git -c safe.directory="$WORKDIR" apply "$PKGDIR/$PATCH_FILE"
-else
-  printf 'Missing patch file: %s\n' "$PATCH_FILE" >&2
-  exit 1
-fi
+for PATCH_FILE in "${PATCH_FILES[@]}"; do
+  if [ -f "$PATCH_FILE" ]; then
+    git -c safe.directory="$WORKDIR" apply "$PATCH_FILE"
+  elif [ -f "$PKGDIR/$PATCH_FILE" ]; then
+    git -c safe.directory="$WORKDIR" apply "$PKGDIR/$PATCH_FILE"
+  else
+    printf 'Missing patch file: %s\n' "$PATCH_FILE" >&2
+    exit 1
+  fi
+done
 
 yarn install --network-timeout 600000
 
