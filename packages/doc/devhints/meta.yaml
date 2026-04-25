@@ -1,0 +1,18 @@
+title: "Devhints"
+description: "Offline collection of developer cheatsheets from devhints.io"
+homepage: "https://github.com/rstacruz/cheatsheets"
+live_url: "https://devhints.io/"
+license: Unknown
+tags:
+  - docs
+  - reference
+  - cheatsheets
+  - development
+  - offline
+
+source:
+  type: git
+  url: "https://github.com/rstacruz/cheatsheets"
+  ref_pattern: "^refs/heads/master$"
+
+docker_image: "node:22-bookworm"
