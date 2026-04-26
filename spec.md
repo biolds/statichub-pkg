@@ -5,7 +5,7 @@
 `statichub-pkg` is the package catalog for the StaticHub ecosystem. It contains:
 
 - Package definitions (`meta.yaml`, optional `build.sh`) organized in a directory hierarchy.
-- The local launcher homepage (`index.html`).
+- Homepage packages such as `home/statichub`, installed like any other package.
 - A repository manifest file (`manifest.json`).
 
 It is cloned locally by the `statichub-cli` and kept up to date via `statichub update` (git pull).
@@ -25,7 +25,7 @@ It is cloned locally by the `statichub-cli` and kept up to date via `statichub u
 
 ```
 manifest.json            # repository metadata (includes api_version)
-index.html               # local launcher homepage
+packages/home/statichub/ # launcher package definition
 packages/
   <category>/
     <package-name>/
@@ -245,11 +245,13 @@ Package maintainers should use these variables instead of hard-coded `/work`, `/
 
 ---
 
-## `index.html` — Local Launcher Homepage
+## Homepage Packages
 
-Served from `<dest>/` after the first `statichub install`. The CLI copies it there on first install and updates it after `statichub update` if a newer version is available.
+Launchers are normal packages installed under their package paths, for example `<dest>/home/statichub/`.
 
-It reads `./catalog.json` at load time (client-side JavaScript) with no external requests.
+The CLI keeps them in `catalog.json`, but the homepage runtime may hide its own package entry from the visible grid. The CLI also generates a root redirect page at `<dest>/index.html` that points to the selected homepage package path.
+
+The homepage package reads `../../catalog.json` at load time with no external requests.
 
 **Features:**
 
@@ -357,5 +359,5 @@ Generates `staticweb.json` from all package metadata and publishes it to the `st
 | `docker_requires_root` optional | Boolean opt-in for Docker-root builds; when set, the CLI runs a second Docker container to restore caller ownership on `STATICHUB_DISTDIR` |
 | No Windows support      | `build.sh` requires bash; Windows out of scope                                                                                                                   |
 | Rollback on failure     | CLI never modifies `<dest>/{path}/` or `catalog.json` if build fails                                                                                             |
-| Homepage versioned      | `index.html` is part of this repo and updated in `<dest>/` after `statichub update`                                                                              |
+| Homepage versioned      | Homepage launchers are versioned packages in `packages/`; the CLI generates the root redirect page in `<dest>/index.html`                                         |
 | **Self-contained**      | Every installed package must work without Internet access; no CDN, no remote resources, no external API calls at runtime — all assets must be bundled into the final installed files, and into `STATICHUB_DISTDIR` when `build.sh` is used |

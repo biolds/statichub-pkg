@@ -1,0 +1,18 @@
+title: "miniPaint"
+description: "Offline-capable browser image editor with layers, drawing tools, and effects"
+homepage: "https://github.com/viliusle/miniPaint"
+live_url: "https://viliusle.github.io/miniPaint/"
+license: MIT
+tags:
+  - office
+  - drawing
+  - image-editor
+  - offline
+
+source:
+  type: git
+  url: "https://github.com/viliusle/miniPaint"
+  ref_pattern: "^refs/tags/v.*$"
+
+docker_image: "node:22"
+docker_requires_root: true

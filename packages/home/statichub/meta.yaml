@@ -1,0 +1,15 @@
+title: "StaticHub Home"
+description: "Local homepage launcher for installed StaticHub applications"
+homepage: "https://github.com/biolds/statichub-home"
+live_url: "https://biolds.github.io/statichub-home/"
+license: MIT
+tags:
+  - home
+  - launcher
+  - dashboard
+  - offline
+
+source:
+  type: git
+  url: "/home/lds/statichub/home/"
+  ref_pattern: "^refs/heads/main$"
