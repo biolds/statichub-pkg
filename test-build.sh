@@ -58,6 +58,7 @@ fi
 echo "--- Extracting metadata ---"
 DOCKER_IMAGE=$(yq -r '.docker_image' "$META_FILE")
 SOURCE_TYPE=$(yq -r '.source.type' "$META_FILE")
+DOCKER_BUILD_REQUIRES_ROOT=$(yq -r '.docker_build_requires_root // false' "$META_FILE")
 
 if [ "$DOCKER_IMAGE" == "null" ]; then
   echo "Error: 'docker_image' not specified in meta.yaml"
@@ -67,6 +68,7 @@ fi
 echo "Package: $PKG_PATH"
 echo "Image:   $DOCKER_IMAGE"
 echo "Source:  $SOURCE_TYPE"
+echo "Root:    $DOCKER_BUILD_REQUIRES_ROOT"
 
 BUILD_PREFIX="${STATICHUB_PREFIX:-/}"
 echo "Prefix:  $BUILD_PREFIX"
@@ -195,17 +197,42 @@ echo "--- Running build in Docker ($DOCKER_IMAGE) ---"
 # Ensure build.sh is executable
 chmod +x "$WORK_DIR/build.sh"
 
-docker run --rm \
-  -e "STATICHUB_PREFIX=$BUILD_PREFIX" \
-  -e "STATICHUB_WORKDIR=/work" \
-  -e "STATICHUB_DISTDIR=/dist" \
-  -e "STATICHUB_PKG=/pkg" \
-  -v "$(pwd)/$WORK_DIR:/work" \
-  -v "$(pwd)/$DIST_DIR:/dist" \
-  -v "$(pwd)/$PKG_DIR:/pkg:ro" \
-  -w /work \
-  "$DOCKER_IMAGE" \
-  bash build.sh
+DOCKER_ARGS=(
+  run
+  --rm
+  -e "STATICHUB_PREFIX=$BUILD_PREFIX"
+  -e "STATICHUB_WORKDIR=/work"
+  -e "STATICHUB_DISTDIR=/dist"
+  -e "STATICHUB_PKG=/pkg"
+  -v "$(pwd)/$WORK_DIR:/work"
+  -v "$(pwd)/$DIST_DIR:/dist"
+  -v "$(pwd)/$PKG_DIR:/pkg:ro"
+  -w /work
+)
+
+if [ "$DOCKER_BUILD_REQUIRES_ROOT" != "true" ]; then
+  DOCKER_ARGS+=(--user "$(id -u):$(id -g)")
+else
+  echo "Package \"$PKG_PATH\" requires root inside the Docker build container"
+fi
+
+DOCKER_ARGS+=(
+  "$DOCKER_IMAGE"
+  sh
+  -lc
+  'umask "${STATICHUB_UMASK:-0022}" && exec bash build.sh'
+)
+
+docker "${DOCKER_ARGS[@]}"
+
+if [ "$DOCKER_BUILD_REQUIRES_ROOT" = "true" ]; then
+  docker run --rm \
+    -e "STATICHUB_HOST_UID=$(id -u)" \
+    -e "STATICHUB_HOST_GID=$(id -g)" \
+    -v "$(pwd)/$DIST_DIR:/dist" \
+    "$DOCKER_IMAGE" \
+    sh -lc 'chown -R "$STATICHUB_HOST_UID:$STATICHUB_HOST_GID" /dist'
+fi
 
 # 5. Move output to build/
 if [ -d "$DIST_DIR" ] && [ -n "$(ls -A "$DIST_DIR")" ]; then
