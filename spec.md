@@ -253,6 +253,8 @@ The CLI keeps them in `catalog.json`, but the homepage runtime may hide its own 
 
 The homepage package reads `../../catalog.json` at load time with no external requests.
 
+Packages may optionally provide one root-level icon file named `icon.svg`, `icon.png`, or `icon.jpg`. The CLI selects the first matching file in that order and exposes it as `catalog.json.packages[].icon`.
+
 **Features:**
 
 - Cards with title, description, tags, installed version, install date.
