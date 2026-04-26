@@ -15,3 +15,4 @@ source:
   ref_pattern: "^refs/tags/v.*$"
 
 docker_image: "node:22"
+docker_requires_root: true

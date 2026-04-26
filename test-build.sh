@@ -58,7 +58,7 @@ fi
 echo "--- Extracting metadata ---"
 DOCKER_IMAGE=$(yq -r '.docker_image' "$META_FILE")
 SOURCE_TYPE=$(yq -r '.source.type' "$META_FILE")
-DOCKER_BUILD_REQUIRES_ROOT=$(yq -r '.docker_build_requires_root // false' "$META_FILE")
+DOCKER_BUILD_REQUIRES_ROOT=$(yq -r '.docker_requires_root // false' "$META_FILE")
 
 if [ "$DOCKER_IMAGE" == "null" ]; then
   echo "Error: 'docker_image' not specified in meta.yaml"

@@ -95,14 +95,14 @@ source:
   # ... type-specific fields (see below)
 
 docker_image: "node:22-alpine" # required when build.sh is present — Docker image used to run the build
-docker_build_requires_root: true # optional — run the Docker build as root, then reconcile dist ownership back to the caller
+docker_requires_root: true # optional — run the Docker build as root, then reconcile dist ownership back to the caller
 ```
 
 **Required fields:** `title`, `description`, `license`, `source.type`.
 
 **Required when `build.sh` is present:** `docker_image` — Docker image used to run `build.sh` inside an ephemeral container.
 
-**Optional fields:** `live_url`, `docker_build_requires_root`.
+**Optional fields:** `live_url`, `docker_requires_root`.
 
 ---
 
@@ -224,7 +224,7 @@ When present, `build.sh` is executed by the CLI in a temporary working directory
 
 By default, `build.sh` runs inside an ephemeral Docker container (`docker run --rm --user <uid>:<gid> -e STATICHUB_WORKDIR=/work -e STATICHUB_DISTDIR=/dist -e STATICHUB_PKG=/pkg -e STATICHUB_UMASK=<umask> -v <workdir>:/work -v <distdir>:/dist -v <pkgdefdir>:/pkg:ro -w /work <docker_image> sh -lc 'umask "$STATICHUB_UMASK" && exec bash build.sh'`) using the image declared in `docker_image`.
 
-If `meta.yaml` sets `docker_build_requires_root: true`, the CLI prints `Package "<name>" requires root inside the Docker build container`, runs the main Docker build as container root, then launches a second container with the same image to `chown` `STATICHUB_DISTDIR` back to the caller UID/GID. If that reconciliation step fails, the install fails. The `--no-docker` flag on `install`/`upgrade` bypasses Docker and runs `build.sh` directly on the host with temporary directories exposed through the same environment variables.
+If `meta.yaml` sets `docker_requires_root: true`, the CLI prints `Package "<name>" requires root inside the Docker build container`, runs the main Docker build as container root, then launches a second container with the same image to `chown` `STATICHUB_DISTDIR` back to the caller UID/GID. If that reconciliation step fails, the install fails. The `--no-docker` flag on `install`/`upgrade` bypasses Docker and runs `build.sh` directly on the host with temporary directories exposed through the same environment variables.
 
 The CLI provides four build variables:
 
@@ -278,7 +278,7 @@ Validates any package added or modified in the PR/push.
        - `source.type: github_release` → `source.repo` must be present.
         - `source.type: git` → `source.url` and `source.ref_pattern` must be present.
       - If `build.sh` is present → `docker_image` must be declared.
-      - If `docker_build_requires_root` is present → it must be a boolean.
+      - If `docker_requires_root` is present → it must be a boolean.
    - If `build.sh` is present: assert it is executable (`test -x build.sh`).
    - Install the CLI from the latest GitHub release of `statichub-cli` (download pre-compiled asset for the runner OS/arch).
    - Run `statichub install {path} --dest /tmp/test`.
@@ -354,7 +354,7 @@ Generates `staticweb.json` from all package metadata and publishes it to the `st
 | `api_version`           | Explicit contract in `manifest.json`; blocking error if CLI is too old                                                                                           |
 | `build.sh` optional     | Required only for `git` (with build step) and `custom`                                                                                                           |
 | `docker_image` required | Required in `meta.yaml` whenever `build.sh` is present; validated by CI                                                                                          |
-| `docker_build_requires_root` optional | Boolean opt-in for Docker-root builds; when set, the CLI runs a second Docker container to restore caller ownership on `STATICHUB_DISTDIR` |
+| `docker_requires_root` optional | Boolean opt-in for Docker-root builds; when set, the CLI runs a second Docker container to restore caller ownership on `STATICHUB_DISTDIR` |
 | No Windows support      | `build.sh` requires bash; Windows out of scope                                                                                                                   |
 | Rollback on failure     | CLI never modifies `<dest>/{path}/` or `catalog.json` if build fails                                                                                             |
 | Homepage versioned      | `index.html` is part of this repo and updated in `<dest>/` after `statichub update`                                                                              |
