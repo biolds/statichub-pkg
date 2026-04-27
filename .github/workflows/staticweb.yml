@@ -1,14 +1,14 @@
-name: Deploy staticweb.json
+name: Deploy to Netlify
 
 on:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: "0 3 * * *"
   push:
     branches:
       - main
     paths:
-      - 'packages/**'
-      - 'scripts/generate_staticweb.py'
+      - "packages/**"
+      - "scripts/generate_staticweb.py"
   workflow_dispatch:
 
 jobs:
@@ -16,6 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Checkout web repo
+        uses: actions/checkout@v4
+        with:
+          repository: biolds/statichub-web
+          path: web-repo
 
       - name: Install PyYAML
         run: pip install pyyaml
@@ -34,5 +40,6 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
           mkdir -p /tmp/netlify-deploy
+          cp web-repo/index.html web-repo/styles.css web-repo/app.js web-repo/icon.svg /tmp/netlify-deploy/
           cp staticweb.json /tmp/netlify-deploy/
           netlify deploy --prod --dir /tmp/netlify-deploy --site "$NETLIFY_SITE_ID"
