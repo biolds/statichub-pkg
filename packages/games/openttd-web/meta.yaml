@@ -1,0 +1,19 @@
+title: "OpenTTD Web"
+description: "Unofficial browser-based WebAssembly port of OpenTTD with local saves, BaNaNaS access, and multiplayer support"
+homepage: "https://github.com/msadev/OpenTTD"
+live_url: "https://openwebports.org/ports/openttd/"
+license: GPL-2.0
+tags:
+  - games
+  - simulation
+  - transport
+  - strategy
+  - wasm
+
+source:
+  type: git
+  url: "https://github.com/msadev/OpenTTD"
+  ref_pattern: "^refs/heads/master$"
+
+docker_image: "node:22"
+docker_requires_root: true
