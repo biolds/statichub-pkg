@@ -166,6 +166,15 @@ def fetch_stars(repo):
         return None
 
 
+def extract_github_repo(url):
+    """Extract owner/repo from a GitHub URL."""
+    if not url:
+        return None
+    import re
+    m = re.match(r"(?:https?://|git@)github\.com[:/]([^/]+/[^/]+?)(?:\.git)?/?$", url)
+    return m.group(1) if m else None
+
+
 def detect_icon(package_dir):
     """Return the icon filename if present, else None."""
     for candidate in ("icon.svg", "icon.png", "icon.jpg"):
@@ -191,6 +200,11 @@ def process_package(category, package, meta_path):
 
     if source.get("type") == "github_release":
         repo = source.get("repo")
+        if repo:
+            stars = fetch_stars(repo)
+    elif source.get("type") == "git":
+        url = source.get("url", "")
+        repo = extract_github_repo(url)
         if repo:
             stars = fetch_stars(repo)
 
