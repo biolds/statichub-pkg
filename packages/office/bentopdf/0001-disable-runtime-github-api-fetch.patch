@@ -1,0 +1,25 @@
+diff --git a/src/js/main.ts b/src/js/main.ts
+index 0000000..0000000 100644
+--- a/src/js/main.ts
++++ b/src/js/main.ts
+@@ -548,17 +548,5 @@
+   if (githubStarsElements.some((el) => el) && !__SIMPLE_MODE__) {
+-    fetch('https://api.github.com/repos/alam00000/bentopdf')
+-      .then((response) => response.json())
+-      .then((data) => {
+-        if (data.stargazers_count !== undefined) {
+-          const formattedStars = formatStars(data.stargazers_count);
+-          githubStarsElements.forEach((el) => {
+-            if (el) el.textContent = formattedStars;
+-          });
+-        }
+-      })
+-      .catch(() => {
+-        githubStarsElements.forEach((el) => {
+-          if (el) el.textContent = '-';
+-        });
+-      });
++    githubStarsElements.forEach((el) => {
++      if (el) el.textContent = '-';
++    });
+   }

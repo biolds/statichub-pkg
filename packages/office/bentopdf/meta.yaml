@@ -1,0 +1,18 @@
+title: "BentoPDF"
+description: "Privacy-first browser PDF toolkit for editing, converting, organizing, and securing documents offline"
+homepage: "https://github.com/alam00000/bentopdf"
+live_url: "https://bentopdf.com/"
+license: AGPL-3.0-only
+tags:
+  - office
+  - pdf
+  - editor
+  - converter
+  - offline
+
+source:
+  type: git
+  url: "https://github.com/alam00000/bentopdf"
+  ref_pattern: "^refs/tags/v.*$"
+
+docker_image: "node:22"
