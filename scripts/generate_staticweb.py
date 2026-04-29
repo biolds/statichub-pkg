@@ -183,6 +183,11 @@ def detect_icon(package_dir):
     return None
 
 
+def detect_readme(package_dir):
+    """Return True if README.md is present."""
+    return os.path.isfile(os.path.join(package_dir, "README.md"))
+
+
 def process_package(category, package, meta_path):
     """Process a single package and return its metadata."""
     meta = load_meta(meta_path)
@@ -194,6 +199,7 @@ def process_package(category, package, meta_path):
 
     package_dir = os.path.dirname(meta_path)
     icon = detect_icon(package_dir)
+    has_readme = detect_readme(package_dir)
 
     version = detect_version(meta)
     stars = None
@@ -213,6 +219,8 @@ def process_package(category, package, meta_path):
     }
     if source.get("repo"):
         source_output["repo"] = source.get("repo")
+    if source.get("url"):
+        source_output["url"] = source.get("url")
 
     return {
         "path": path,
@@ -226,6 +234,7 @@ def process_package(category, package, meta_path):
         "source": source_output,
         "tags": meta.get("tags", []),
         "icon": icon,
+        "has_readme": has_readme,
     }
 
 
