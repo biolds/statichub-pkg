@@ -1,0 +1,18 @@
+title: "VERT"
+description: "Offline-capable browser file converter for images, audio, and documents with local WebAssembly processing"
+homepage: "https://github.com/VERT-sh/VERT"
+live_url: "https://vert.sh/"
+license: AGPL-3.0-only
+tags:
+  - tools
+  - converter
+  - wasm
+  - offline
+  - media
+
+source:
+  type: git
+  url: "https://github.com/VERT-sh/VERT"
+  ref_pattern: "^refs/heads/main$"
+
+docker_image: "oven/bun:1"
