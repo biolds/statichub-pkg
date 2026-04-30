@@ -23,6 +23,15 @@ jobs:
           repository: biolds/statichub-web
           path: web-repo
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web-repo
+
       - name: Install PyYAML
         run: pip install pyyaml
 
@@ -39,7 +48,8 @@ jobs:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
-          mkdir -p /tmp/netlify-deploy
+          mkdir -p /tmp/netlify-deploy/node_modules/marked
           cp web-repo/index.html web-repo/styles.css web-repo/app.js web-repo/icon.svg /tmp/netlify-deploy/
           cp staticweb.json /tmp/netlify-deploy/
+          cp web-repo/node_modules/marked/marked.min.js /tmp/netlify-deploy/node_modules/marked/
           netlify deploy --prod --dir /tmp/netlify-deploy --site "$NETLIFY_SITE_ID"
