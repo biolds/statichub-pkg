@@ -14,12 +14,10 @@ if [ -f /emsdk/emsdk_env.sh ]; then
 fi
 
 apt-get update -qq
-apt-get install -y -qq wget unzip build-essential libtool libtool-bin pkg-config m4 gettext
+apt-get install -y -qq wget build-essential libtool libtool-bin pkg-config m4 gettext
 
-wget -q -O freedoom.zip https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip
-unzip -q freedoom.zip
-cp freedoom-0.13.0/freedoom1.wad src/doom1.wad
-rm -rf freedoom-0.13.0 freedoom.zip
+wget -q -O src/doom1.wad https://distro.ibiblio.org/slitaz/sources/packages/d/doom1.wad
+echo "5b2e249b9c5133ec987b3ea77596381dc0d6bc1d  src/doom1.wad" | sha1sum -c -
 
 embuilder build sdl2
 embuilder build sdl2_mixer
