@@ -16,4 +16,4 @@ source:
   format: zip
   strip: 0
 
-docker_image: "bash:5.2"
+build_docker_image: "bash:5.2"

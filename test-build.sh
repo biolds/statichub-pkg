@@ -13,6 +13,7 @@ PKG_PATH="$1"
 PKG_DIR="packages/$PKG_PATH"
 META_FILE="$PKG_DIR/meta.yaml"
 BUILD_SH="$PKG_DIR/build.sh"
+INJECT_SH="$PKG_DIR/inject.sh"
 SRC_DIR="$PKG_DIR/src"
 WORK_DIR="$PKG_DIR/work"
 DIST_DIR="$PKG_DIR/dist"
@@ -49,23 +50,25 @@ if [ ! -f "$META_FILE" ]; then
   exit 1
 fi
 
-if [ ! -f "$BUILD_SH" ]; then
-  echo "Error: '$BUILD_SH' not found."
+# 1. Extract metadata
+echo "--- Extracting metadata ---"
+BUILD_DOCKER_IMAGE=$(yq -r '.build_docker_image // ""' "$META_FILE")
+INJECT_DOCKER_IMAGE=$(yq -r '.inject_docker_image // ""' "$META_FILE")
+SOURCE_TYPE=$(yq -r '.source.type' "$META_FILE")
+
+if [ -f "$BUILD_SH" ] && [ -z "$BUILD_DOCKER_IMAGE" ]; then
+  echo "Error: 'build_docker_image' not specified in meta.yaml"
   exit 1
 fi
 
-# 1. Extract metadata
-echo "--- Extracting metadata ---"
-DOCKER_IMAGE=$(yq -r '.docker_image' "$META_FILE")
-SOURCE_TYPE=$(yq -r '.source.type' "$META_FILE")
-
-if [ "$DOCKER_IMAGE" == "null" ]; then
-  echo "Error: 'docker_image' not specified in meta.yaml"
+if [ -f "$INJECT_SH" ] && [ -z "$INJECT_DOCKER_IMAGE" ]; then
+  echo "Error: 'inject_docker_image' not specified in meta.yaml"
   exit 1
 fi
 
 echo "Package: $PKG_PATH"
-echo "Image:   $DOCKER_IMAGE"
+echo "Build:   ${BUILD_DOCKER_IMAGE:-<none>}"
+echo "Inject:  ${INJECT_DOCKER_IMAGE:-<none>}"
 echo "Source:  $SOURCE_TYPE"
 
 BUILD_PREFIX="${STATICHUB_PREFIX:-/}"
@@ -179,58 +182,91 @@ else
   echo "--- Reusing existing src/ directory ---"
 fi
 
-# 3. Prepare Build
-echo "--- Preparing build ---"
-# Create fresh work/ and dist/ directories for the build run.
-rm -rf "$WORK_DIR" "$DIST_DIR"
-mkdir -p "$WORK_DIR" "$DIST_DIR"
-cp -a "$SRC_DIR"/. "$WORK_DIR/"
+# 3. Prepare Build Or Direct Install Content
+if [ -f "$BUILD_SH" ]; then
+  echo "--- Preparing build ---"
+  rm -rf "$WORK_DIR" "$DIST_DIR"
+  mkdir -p "$WORK_DIR" "$DIST_DIR"
+  cp -a "$SRC_DIR"/. "$WORK_DIR/"
 
-# Copy build.sh and other package files into work/.
-# Exclude meta.yaml, src/, work/, dist/, build/
-find "$PKG_DIR" -maxdepth 1 -not -path "$PKG_DIR" -not -name "meta.yaml" -not -name "src" -not -name "work" -not -name "dist" -not -name "build" -exec cp -r {} "$WORK_DIR/" \;
+  find "$PKG_DIR" -maxdepth 1 -not -path "$PKG_DIR" -not -name "meta.yaml" -not -name "src" -not -name "work" -not -name "dist" -not -name "build" -exec cp -r {} "$WORK_DIR/" \;
 
-# 4. Execute Build
-echo "--- Running build in Docker ($DOCKER_IMAGE) ---"
-# Ensure build.sh is executable
-chmod +x "$WORK_DIR/build.sh"
+  echo "--- Running build in Docker ($BUILD_DOCKER_IMAGE) ---"
+  chmod +x "$WORK_DIR/build.sh"
 
-DOCKER_ARGS=(
-  run
-  --rm
-  -e "STATICHUB_PREFIX=$BUILD_PREFIX"
-  -e "STATICHUB_WORKDIR=/work"
-  -e "STATICHUB_DISTDIR=/dist"
-  -e "STATICHUB_PKG=/pkg"
-  -v "$(pwd)/$WORK_DIR:/work"
-  -v "$(pwd)/$DIST_DIR:/dist"
-  -v "$(pwd)/$PKG_DIR:/pkg:ro"
-  -w /work
-)
+  DOCKER_ARGS=(
+    run
+    --rm
+    -e "STATICHUB_PREFIX=$BUILD_PREFIX"
+    -e "STATICHUB_WORKDIR=/work"
+    -e "STATICHUB_DISTDIR=/dist"
+    -e "STATICHUB_PKG=/pkg"
+    -v "$(pwd)/$WORK_DIR:/work"
+    -v "$(pwd)/$DIST_DIR:/dist"
+    -v "$(pwd)/$PKG_DIR:/pkg:ro"
+    -w /work
+    "$BUILD_DOCKER_IMAGE"
+    sh
+    -lc
+    'umask "${STATICHUB_UMASK:-0022}" && exec bash build.sh'
+  )
 
-DOCKER_ARGS+=(
-  "$DOCKER_IMAGE"
-  sh
-  -lc
-  'umask "${STATICHUB_UMASK:-0022}" && exec bash build.sh'
-)
+  docker "${DOCKER_ARGS[@]}"
 
-docker "${DOCKER_ARGS[@]}"
+  docker run --rm \
+    -e "STATICHUB_HOST_UID=$(id -u)" \
+    -e "STATICHUB_HOST_GID=$(id -g)" \
+    -v "$(pwd)/$DIST_DIR:/dist" \
+    "$BUILD_DOCKER_IMAGE" \
+    sh -lc 'chown -R "$STATICHUB_HOST_UID:$STATICHUB_HOST_GID" /dist'
 
-docker run --rm \
-  -e "STATICHUB_HOST_UID=$(id -u)" \
-  -e "STATICHUB_HOST_GID=$(id -g)" \
-  -v "$(pwd)/$DIST_DIR:/dist" \
-  "$DOCKER_IMAGE" \
-  sh -lc 'chown -R "$STATICHUB_HOST_UID:$STATICHUB_HOST_GID" /dist'
-
-# 5. Move output to build/
-if [ -d "$DIST_DIR" ] && [ -n "$(ls -A "$DIST_DIR")" ]; then
-  echo "--- Moving output to build/ ---"
-  rm -rf "$BUILD_DIR"
-  mv "$DIST_DIR" "$BUILD_DIR"
-  echo "Success! Build output is in '$BUILD_DIR'"
+  if [ -d "$DIST_DIR" ] && [ -n "$(ls -A "$DIST_DIR")" ]; then
+    echo "--- Moving output to build/ ---"
+    rm -rf "$BUILD_DIR"
+    mv "$DIST_DIR" "$BUILD_DIR"
+  else
+    echo "Error: Build did not produce any output in '/dist'."
+    exit 1
+  fi
 else
-  echo "Error: Build did not produce any output in '/dist'."
-  exit 1
+  echo "--- No build.sh, using source files directly ---"
+  rm -rf "$BUILD_DIR"
+  mkdir -p "$BUILD_DIR"
+  cp -a "$SRC_DIR"/. "$BUILD_DIR/"
 fi
+
+if [ -f "$INJECT_SH" ]; then
+  echo "--- Running inject in Docker ($INJECT_DOCKER_IMAGE) ---"
+  DATA_DIR="$PKG_DIR/inject_data"
+  if [ ! -d "$DATA_DIR" ]; then
+    DATA_DIR=$(mktemp -d)
+    trap 'rm -rf "$DATA_DIR"' EXIT
+  fi
+
+  INJECT_WORK_DIR=$(mktemp -d)
+  trap 'rm -rf "$INJECT_WORK_DIR"' EXIT
+  cp -a "$PKG_DIR"/. "$INJECT_WORK_DIR/"
+  chmod +x "$INJECT_WORK_DIR/inject.sh"
+
+  docker run --rm \
+    -e "STATICHUB_WORKDIR=/work" \
+    -e "STATICHUB_DISTDIR=/dist" \
+    -e "STATICHUB_PKG=/pkg" \
+    -e "STATICHUB_DATADIR=/data" \
+    -v "$INJECT_WORK_DIR:/work" \
+    -v "$(pwd)/$BUILD_DIR:/dist" \
+    -v "$(pwd)/$PKG_DIR:/pkg:ro" \
+    -v "$(pwd)/$DATA_DIR:/data:ro" \
+    -w /work \
+    "$INJECT_DOCKER_IMAGE" \
+    sh -lc 'umask "${STATICHUB_UMASK:-0022}" && exec bash inject.sh'
+
+  docker run --rm \
+    -e "STATICHUB_HOST_UID=$(id -u)" \
+    -e "STATICHUB_HOST_GID=$(id -g)" \
+    -v "$(pwd)/$BUILD_DIR:/dist" \
+    "$INJECT_DOCKER_IMAGE" \
+    sh -lc 'chown -R "$STATICHUB_HOST_UID:$STATICHUB_HOST_GID" /dist'
+fi
+
+echo "Success! Final output is in '$BUILD_DIR'"

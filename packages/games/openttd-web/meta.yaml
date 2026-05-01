@@ -15,4 +15,4 @@ source:
   url: "https://github.com/msadev/OpenTTD"
   ref_pattern: "^refs/heads/master$"
 
-docker_image: "node:22"
+build_docker_image: "node:22"

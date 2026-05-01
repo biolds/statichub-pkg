@@ -15,4 +15,4 @@ source:
   url: "https://github.com/VERT-sh/VERT"
   ref_pattern: "^refs/heads/main$"
 
-docker_image: "oven/bun:1"
+build_docker_image: "oven/bun:1"

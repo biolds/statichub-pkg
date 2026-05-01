@@ -4,7 +4,7 @@
 
 `statichub-pkg` is the package catalog for the StaticHub ecosystem. It contains:
 
-- Package definitions (`meta.yaml`, optional `build.sh`) organized in a directory hierarchy.
+- Package definitions (`meta.yaml`, optional `build.sh`, optional `inject.sh`) organized in a directory hierarchy.
 - Homepage packages such as `home/statichub`, installed like any other package.
 - A repository manifest file (`manifest.json`).
 
@@ -62,7 +62,7 @@ JSON file at the repository root containing repository metadata, including the `
 
 ```json
 {
-  "api_version": 1
+  "api_version": 2
 }
 ```
 
@@ -94,12 +94,15 @@ source:
   type: github_release # archive | github_release | gitlab_release | git | custom
   # ... type-specific fields (see below)
 
-docker_image: "node:22-alpine" # required when build.sh is present — Docker image used to run the build
+build_docker_image: "node:22-alpine" # required when build.sh is present
+inject_docker_image: "bash:5.2"      # required when inject.sh is present
 ```
 
 **Required fields:** `title`, `description`, `license`, `source.type`.
 
-**Required when `build.sh` is present:** `docker_image` — Docker image used to run `build.sh` inside an ephemeral container.
+**Required when `build.sh` is present:** `build_docker_image`.
+
+**Required when `inject.sh` is present:** `inject_docker_image`.
 
 **Optional fields:** `live_url`.
 
@@ -221,7 +224,7 @@ Update detection: compare `upstream_version` in `meta.yaml` against `catalog.jso
 
 When present, `build.sh` is executed by the CLI in a temporary working directory with the source already present (extracted archive, cloned repo, or empty dir for `custom`). It **must write the final static files into `STATICHUB_DISTDIR`**.
 
-By default, `build.sh` runs inside an ephemeral Docker container (`docker run --rm -e STATICHUB_WORKDIR=/work -e STATICHUB_DISTDIR=/dist -e STATICHUB_PKG=/pkg -e STATICHUB_UMASK=<umask> -v <workdir>:/work -v <distdir>:/dist -v <pkgdefdir>:/pkg:ro -w /work <docker_image> sh -lc 'umask "$STATICHUB_UMASK" && exec bash build.sh'`) using the image declared in `docker_image`.
+By default, `build.sh` runs inside an ephemeral Docker container (`docker run --rm -e STATICHUB_WORKDIR=/work -e STATICHUB_DISTDIR=/dist -e STATICHUB_PKG=/pkg -e STATICHUB_UMASK=<umask> -v <workdir>:/work -v <distdir>:/dist -v <pkgdefdir>:/pkg:ro -w /work <build_docker_image> sh -lc 'umask "$STATICHUB_UMASK" && exec bash build.sh'`) using the image declared in `build_docker_image`.
 
 After a successful build, the CLI launches a second container with the same image to `chown` `STATICHUB_DISTDIR` back to the caller UID/GID. If that reconciliation step fails, the install fails. The `--no-docker` flag on `install`/`upgrade` bypasses Docker and runs `build.sh` directly on the host with temporary directories exposed through the same environment variables.
 
@@ -280,7 +283,8 @@ Validates any package added or modified in the PR/push.
        - `source.type: archive` with no `upstream_version` → `source.url` must be present.
        - `source.type: github_release` → `source.repo` must be present.
         - `source.type: git` → `source.url` and `source.ref_pattern` must be present.
-       - If `build.sh` is present → `docker_image` must be declared.
+        - If `build.sh` is present → `build_docker_image` must be declared.
+        - If `inject.sh` is present → `inject_docker_image` must be declared.
    - If `build.sh` is present: assert it is executable (`test -x build.sh`).
    - Install the CLI from the latest GitHub release of `statichub-cli` (download pre-compiled asset for the runner OS/arch).
    - Run `statichub install {path} --dest /tmp/test`.
@@ -355,7 +359,8 @@ Generates `staticweb.json` from all package metadata and publishes it to the `st
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `api_version`           | Explicit contract in `manifest.json`; blocking error if CLI is too old                                                                                           |
 | `build.sh` optional     | Required only for `git` (with build step) and `custom`                                                                                                           |
-| `docker_image` required | Required in `meta.yaml` whenever `build.sh` is present; validated by CI                                                                                          |
+| `build_docker_image` required | Required in `meta.yaml` whenever `build.sh` is present; validated by CI                                                                                  |
+| `inject_docker_image` required | Required in `meta.yaml` whenever `inject.sh` is present; validated by CI                                                                                |
 | `docker_requires_root` removed | Docker builds now always run as root; ownership reconciliation is always performed |
 | No Windows support      | `build.sh` requires bash; Windows out of scope                                                                                                                   |
 | Rollback on failure     | CLI never modifies `<dest>/{path}/` or `catalog.json` if build fails                                                                                             |

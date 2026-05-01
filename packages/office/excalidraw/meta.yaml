@@ -14,4 +14,4 @@ source:
   url: "https://github.com/excalidraw/excalidraw"
   ref_pattern: "^refs/tags/v.*$"
 
-docker_image: "node:22"
+build_docker_image: "node:22"

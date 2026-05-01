@@ -13,3 +13,5 @@ source:
   type: git
   url: "https://github.com/biolds/statichub-home"
   ref_pattern: "^refs/heads/main$"
+
+inject_docker_image: "bash:5.2"

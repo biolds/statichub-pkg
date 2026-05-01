@@ -1,0 +1,11 @@
+{
+  "packages": [
+    {
+      "path": "/status",
+      "title": "Status",
+      "description": "Local service status page",
+      "external": true,
+      "tags": ["ops", "local"]
+    }
+  ]
+}

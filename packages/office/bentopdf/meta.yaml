@@ -15,4 +15,4 @@ source:
   url: "https://github.com/alam00000/bentopdf"
   ref_pattern: "^refs/tags/v.*$"
 
-docker_image: "node:22"
+build_docker_image: "node:22"
