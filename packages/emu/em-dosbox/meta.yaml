@@ -1,0 +1,17 @@
+title: "Em-DOSBox"
+description: "An Emscripten and WebAssembly port of DOSBox for the browser"
+homepage: "https://github.com/dreamlayers/em-dosbox"
+license: GPL-2.0
+tags:
+  - games
+  - emulator
+  - dos
+  - wasm
+
+source:
+  type: git
+  url: "https://github.com/dreamlayers/em-dosbox.git"
+  ref_pattern: "^refs/heads/em-dosbox-svn-sdl2$"
+
+build_docker_image: "emscripten/emsdk:3.1.44"
+inject_docker_image: "emscripten/emsdk:3.1.44"
