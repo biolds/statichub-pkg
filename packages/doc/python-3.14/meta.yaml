@@ -1,0 +1,15 @@
+title: "Python 3.14 Documentation"
+description: "Offline HTML documentation for Python 3.14"
+homepage: "https://docs.python.org/3/"
+license: "PSF-2.0"
+tags:
+- doc
+- python
+- reference
+
+source:
+  type: archive
+  url: "https://docs.python.org/3/archives/python-3.14-docs-html.tar.bz2"
+  format: tar.bz2
+  strip: 1
+  upstream_version: "3.14"
