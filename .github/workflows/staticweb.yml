@@ -43,10 +43,9 @@ jobs:
 
       - name: Prepare Cloudflare Pages deploy directory
         run: |
-          mkdir -p /tmp/cloudflare-pages-deploy/node_modules/marked
-          cp web-repo/index.html web-repo/styles.css web-repo/app.js web-repo/icon.svg /tmp/cloudflare-pages-deploy/
+          mkdir -p /tmp/cloudflare-pages-deploy/
+          cp web-repo/index.html web-repo/styles.css web-repo/app.js web-repo/icon.svg web-repo/node_modules/marked/marked.min.js /tmp/cloudflare-pages-deploy/
           cp staticweb.json /tmp/cloudflare-pages-deploy/
-          cp web-repo/node_modules/marked/marked.min.js /tmp/cloudflare-pages-deploy/node_modules/marked/
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
